@@ -33,7 +33,7 @@ def get_proxies():
 	url = 'http://www.xicidaili.com/wt/'
 	r = requests.get(url, headers=HEADERS, timeout=10).text
 	trs = BeautifulSoup(r, 'lxml').select('#ip_list tr')
-	for i in range(1, 51):
+	for i in range(1, 101):
 		ip = trs[i].select('td:nth-of-type(2)')[0].text
 		port = trs[i].select('td:nth-of-type(3)')[0].text
 		res = 'http://%s:%s' % (ip, port)
@@ -50,17 +50,19 @@ def get_api_data():
 	"""
 	for idx, movie in enumerate(movies):
 		url = API_URL + movie.doubanId
-		for i in range(50):
-			proxies = proxy_ips[i]
+		for i in range(100):
+			proxies = proxy_ips[0]
 			print(proxies)
 			try:
-				r = requests.get(url, headers=HEADERS, timeout=10).text
+				r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
 				data = json.loads(r)
 			except Exception as e:
 				print('------------请求失败, 重试------------')
+				proxy_ips.pop(0)
 				continue
 			if data.get('code') == 112:
 				print('------------IP次数达到上限，切换IP------------')
+				proxy_ips.pop(0)
 			else:
 				break
 		print('%s: %s-%s' % (idx, movie.doubanId, data.get('alt_title')))
@@ -73,7 +75,7 @@ def get_api_data():
 			movie.duration = attrs.get('movie_duration')
 			movie.movieType = attrs.get('movie_type')
 			movie.pubdate = attrs.get('pubdate')
-		# movie.get_all_attr()
+		movie.get_all_attr()
 
 
 def main():
