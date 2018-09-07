@@ -1,5 +1,6 @@
 import requests
 import re
+import time
 import json
 from bs4 import BeautifulSoup
 
@@ -13,6 +14,9 @@ COMING_URL = 'https://movie.douban.com/coming'
 
 # 豆瓣api_url
 API_URL = 'http://api.douban.com/v2/movie/'
+
+# 豆瓣电影详情url
+DETAIL_URL = 'https://movie.douban.com/subject/'
 
 # 模拟请求头
 HEADERS = {
@@ -28,8 +32,10 @@ movies = []
 proxy_ips = []
 
 
-# 获取代理IP池
 def get_proxies():
+	"""
+	获取代理IP池
+	"""
 	url = 'http://www.xicidaili.com/wt/'
 	r = requests.get(url, headers=HEADERS, timeout=10).text
 	trs = BeautifulSoup(r, 'lxml').select('#ip_list tr')
@@ -42,6 +48,43 @@ def get_proxies():
 		})
 	print('------------已获取代理ip池，开始爬取------------')
 	main()
+
+
+def get_page_data():
+	"""
+	爬取电影详情页获取预告片
+	"""
+	for idx, movie in enumerate(movies):
+		print('------------开始请求doubanID: %s------------' % movie.doubanId)
+		time.sleep(3)
+		url = DETAIL_URL + movie.doubanId
+		r = requests.get(url, headers=HEADERS, timeout=10).text
+		poster = BeautifulSoup(r, 'lxml').select('div#mainpic img')[0]['src']
+		movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
+		lists = BeautifulSoup(r, 'lxml').select('ul.celebrities-list .celebrity')
+		casts = []
+		for i in range(1, len(lists)):
+			try:
+				backgroud = lists[i].find('div', class_='avatar')['style']
+			except Exception as e:
+				print('------------无效图片块儿------------')
+				continue
+			avatar = re.findall(r'http[s]?://[\w./]+', backgroud)[0]
+			name = lists[i].find('a', class_='name').text
+			casts.append({
+				'name': name,
+				'avatar': avatar
+			})
+		movie.casts = casts
+		trailer = BeautifulSoup(r, 'lxml').find('li', class_="label-trailer")
+		if (trailer):
+			movie.cover = re.findall(r'http[s]?://[\w./]+', trailer.find('a')['style'])[0]
+			r2 = requests.get(trailer.find('a')['href'], headers=HEADERS, timeout=10).text
+			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
+			print(idx, movie.cover)
+			print(idx, movie.video)
+		else:
+			print('------------没有预告片------------')
 
 
 def get_api_data():
@@ -75,7 +118,7 @@ def get_api_data():
 			movie.duration = attrs.get('movie_duration')
 			movie.movieType = attrs.get('movie_type')
 			movie.pubdate = attrs.get('pubdate')
-		movie.get_all_attr()
+	# movies[0].get_all_attr()
 
 
 def main():
@@ -93,8 +136,8 @@ def main():
 		href = it.select('td:nth-of-type(2) > a')[0]['href']
 		movie = Movie(re.findall(r'\d+\.?', href)[0])
 		movies.append(movie)
-	get_api_data()
+	get_page_data()
 
 
 if __name__ == '__main__':
-	get_proxies()
+	main()
