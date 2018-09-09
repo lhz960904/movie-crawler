@@ -47,14 +47,23 @@ def get_proxies():
 			'http': res
 		})
 	print('------------已获取代理ip池，开始爬取------------')
-	main()
 
+
+def insertMongoDB():
+	"""
+	插入mongoDB数据库
+	"""
+	movie_list = [x for x in movies if not x.get('video')]
+	print('*******************有效电影数: %s******************' % len(movie_list))
+	for movie in movie_list:
+		movie.insertMongo()
 
 def get_page_data():
 	"""
 	爬取电影详情页获取预告片
 	"""
 	for idx, movie in enumerate(movies):
+		proxies = proxy_ips[0]
 		print('------------开始请求doubanID: %s------------' % movie.doubanId)
 		time.sleep(3)
 		url = DETAIL_URL + movie.doubanId
@@ -81,11 +90,9 @@ def get_page_data():
 			movie.cover = re.findall(r'http[s]?://[\w./]+', trailer.find('a')['style'])[0]
 			r2 = requests.get(trailer.find('a')['href'], headers=HEADERS, timeout=10).text
 			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
-			print(idx, movie.cover)
-			print(idx, movie.video)
 		else:
 			print('------------没有预告片------------')
-
+	insertMongoDB()
 
 def get_api_data():
 	"""
@@ -108,7 +115,7 @@ def get_api_data():
 				proxy_ips.pop(0)
 			else:
 				break
-		print('%s: %s-%s' % (idx, movie.doubanId, data.get('alt_title')))
+		print('%s: %s-%s' % (idx, movie.doubanId, data.get('title')))
 		movie.author = data.get('author')
 		movie.title = data.get('alt_title')
 		movie.enTitle = data.get('title')
@@ -118,13 +125,14 @@ def get_api_data():
 			movie.duration = attrs.get('movie_duration')
 			movie.movieType = attrs.get('movie_type')
 			movie.pubdate = attrs.get('pubdate')
-	# movies[0].get_all_attr()
+	get_page_data()
 
 
 def main():
 	"""
 	爬虫入口，获取要爬取的电影ID
 	"""
+	get_proxies()
 	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
 	for it in lists:
@@ -135,8 +143,8 @@ def main():
 	for it in movie_row:
 		href = it.select('td:nth-of-type(2) > a')[0]['href']
 		movie = Movie(re.findall(r'\d+\.?', href)[0])
-		movies.append(movie)
-	get_page_data()
+		movies.append(movie)	
+	get_api_data()
 
 
 if __name__ == '__main__':
