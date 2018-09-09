@@ -12,11 +12,9 @@ class Movie(object):
 	def insertMongo(self):
 		"""
 		插入数据库，打印日志
-		格式：插入时间———ObjectId———电影doubanID——电影名字
+		待完善
 		"""
 		db = pymongo.MongoClient("mongodb://localhost:27017/")['moviedb']
 		collection = db["movies"]
 		movie_dict = dict(vars(self).items()) 
-		result = collection.insert_one(movie_dict) 
-		insert_time = time.strftime('%H:%M:%S', time.localtime())
-		print('%s——%s——%s——%s' % (insert_time, result.inserted_id, self.doubanId, self.title))
+		collection.insert_one(movie_dict)

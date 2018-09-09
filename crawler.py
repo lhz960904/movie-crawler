@@ -1,7 +1,8 @@
-import requests
 import re
 import time
 import json
+import logging
+import requests
 from bs4 import BeautifulSoup
 
 from movie import Movie
@@ -26,15 +27,16 @@ HEADERS = {
     'Referer': 'https://www.douban.com/'
 }
 
-# 电影
+# 电影实例list
 movies = []
-# 代理IP
+
+# 代理IP池
 proxy_ips = []
 
 
 def get_proxies():
 	"""
-	获取代理IP池
+	通过爬取西刺代理获取100条IP
 	"""
 	url = 'http://www.xicidaili.com/wt/'
 	r = requests.get(url, headers=HEADERS, timeout=10).text
@@ -46,25 +48,16 @@ def get_proxies():
 		proxy_ips.append({
 			'http': res
 		})
-	print('------------已获取代理ip池，开始爬取------------')
+	logging.info('----------已获取代理ip池, 开始爬取豆瓣----------')
 
 
-def insertMongoDB():
-	"""
-	插入mongoDB数据库
-	"""
-	movie_list = [x for x in movies if not x.get('video')]
-	print('*******************有效电影数: %s******************' % len(movie_list))
-	for movie in movie_list:
-		movie.insertMongo()
 
 def get_page_data():
 	"""
 	爬取电影详情页获取预告片
 	"""
 	for idx, movie in enumerate(movies):
-		proxies = proxy_ips[0]
-		print('------------开始请求doubanID: %s------------' % movie.doubanId)
+		logging.info('***开始爬取第%s个, doubanId是%s***' % (idx, movie.doubanId))
 		time.sleep(3)
 		url = DETAIL_URL + movie.doubanId
 		r = requests.get(url, headers=HEADERS, timeout=10).text
@@ -76,7 +69,7 @@ def get_page_data():
 			try:
 				backgroud = lists[i].find('div', class_='avatar')['style']
 			except Exception as e:
-				print('------------无效图片块儿------------')
+				logging.info('无效图片块儿')
 				continue
 			avatar = re.findall(r'http[s]?://[\w./]+', backgroud)[0]
 			name = lists[i].find('a', class_='name').text
@@ -86,13 +79,15 @@ def get_page_data():
 			})
 		movie.casts = casts
 		trailer = BeautifulSoup(r, 'lxml').find('li', class_="label-trailer")
-		if (trailer):
+		if trailer:
 			movie.cover = re.findall(r'http[s]?://[\w./]+', trailer.find('a')['style'])[0]
 			r2 = requests.get(trailer.find('a')['href'], headers=HEADERS, timeout=10).text
 			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
+			movie.insertMongo()
+			logging.info('doubanId:%s, 存入数据库' % (movie.doubanId, movie.title, result.inserted_id))
 		else:
-			print('------------没有预告片------------')
-	insertMongoDB()
+			logging.info('doubanId:%s, 没有预告片' % movie.doubanId)
+
 
 def get_api_data():
 	"""
@@ -102,20 +97,19 @@ def get_api_data():
 		url = API_URL + movie.doubanId
 		for i in range(100):
 			proxies = proxy_ips[0]
-			print(proxies)
 			try:
 				r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
 				data = json.loads(r)
 			except Exception as e:
-				print('------------请求失败, 重试------------')
+				logging.info('请求api失败, 重试第%s次' % i)
 				proxy_ips.pop(0)
 				continue
 			if data.get('code') == 112:
-				print('------------IP次数达到上限，切换IP------------')
+				logging.info('IP次数达到上限, 切换IP')
 				proxy_ips.pop(0)
 			else:
 				break
-		print('%s: %s-%s' % (idx, movie.doubanId, data.get('title')))
+		logging.info('爬取第%s个: %s-%s' % (idx, movie.doubanId, data.get('alt_title')))
 		movie.author = data.get('author')
 		movie.title = data.get('alt_title')
 		movie.enTitle = data.get('title')
@@ -125,27 +119,37 @@ def get_api_data():
 			movie.duration = attrs.get('movie_duration')
 			movie.movieType = attrs.get('movie_type')
 			movie.pubdate = attrs.get('pubdate')
+	logging.info('----------已获取基本数据, 开始爬取预告片---------')
 	get_page_data()
 
 
 def main():
 	"""
-	爬虫入口，获取要爬取的电影ID
+	爬虫入口，获取要爬取的电影doubanID
 	"""
 	get_proxies()
+	# 获取正在热映的电影列表
 	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
-	for it in lists:
-		movie = Movie(it['id'])
-		movies.append(movie)
+	movies.extend([Movie(it['id']) for it in lists])
+	# 获取即将上映的电影列表
 	r = requests.get(COMING_URL, headers=HEADERS, timeout=10).text
 	movie_row = BeautifulSoup(r, 'lxml').select('table.coming_list tbody tr')
 	for it in movie_row:
 		href = it.select('td:nth-of-type(2) > a')[0]['href']
 		movie = Movie(re.findall(r'\d+\.?', href)[0])
-		movies.append(movie)	
+		movies.append(movie)
+	logging.info('----------已获取待爬取电影数组, 总数量为%s---------' % len(movies))
 	get_api_data()
 
 
+
 if __name__ == '__main__':
+	# log日志配置
+	logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s (%(levelname)s) : %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        filename='crwaler_log',
+        filemode='a')
 	main()
