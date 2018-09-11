@@ -84,7 +84,7 @@ def get_page_data():
 			r2 = requests.get(trailer.find('a')['href'], headers=HEADERS, timeout=10).text
 			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
 			movie.insertMongo()
-			logging.info('doubanId:%s, 存入数据库' % (movie.doubanId, movie.title, result.inserted_id))
+			logging.info('doubanId:%s, 存入数据库' % movie.doubanId)
 		else:
 			logging.info('doubanId:%s, 没有预告片' % movie.doubanId)
 
@@ -150,6 +150,6 @@ if __name__ == '__main__':
         level=logging.INFO,
         format='%(asctime)s (%(levelname)s) : %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
-        filename='crwaler_log',
+        filename='crawler_log',
         filemode='a')
 	main()
