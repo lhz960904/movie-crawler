@@ -3,6 +3,7 @@ import time
 import json
 import logging
 import requests
+import pymongo
 from bs4 import BeautifulSoup
 
 from movie import Movie
@@ -152,4 +153,7 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S',
         filename='crawler_log',
         filemode='a')
-	main()
+	db = pymongo.MongoClient("mongodb://localhost:27017/")['moviedb']
+	db["movies"].drop()
+	db["categories"].drop()
+	# main()
