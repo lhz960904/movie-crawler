@@ -61,7 +61,7 @@ def get_page_data():
 		logging.info('***开始爬取第%s个, doubanId是%s***' % (idx, movie.doubanId))
 		time.sleep(3)
 		url = DETAIL_URL + movie.doubanId
-		r = requests.get(url, headers=HEADERS, timeout=10).text
+		r = requests.get(url, timeout=10, headers=HEADERS).text
 		poster = BeautifulSoup(r, 'lxml').select('div#mainpic img')[0]['src']
 		movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
 		lists = BeautifulSoup(r, 'lxml').select('ul.celebrities-list .celebrity')
@@ -131,6 +131,7 @@ def main():
 	get_proxies()
 	# 获取正在热映的电影列表
 	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
+	# print(r)
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
 	movies.extend([Movie(it['id']) for it in lists])
 	# 获取即将上映的电影列表
@@ -153,7 +154,7 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S',
         filename='crawler_log',
         filemode='a')
-	db = pymongo.MongoClient("mongodb://localhost:27017/")['moviedb']
+	db = pymongo.MongoClient("mongodb://localhost:27017/")['movie-trailer']
 	db["movies"].drop()
 	db["categories"].drop()
-	# main()
+	main()

@@ -2,7 +2,7 @@ import pymongo
 import time
 
 
-db = pymongo.MongoClient("mongodb://localhost:27017/")['moviedb']
+db = pymongo.MongoClient("mongodb://localhost:27017/")['movie-trailer']
 class Movie(object):
 	def __init__(self, doubanId):
 		self.doubanId = doubanId
