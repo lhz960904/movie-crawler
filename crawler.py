@@ -61,7 +61,11 @@ def get_page_data():
 		logging.info('***开始爬取第%s个, doubanId是%s***' % (idx, movie.doubanId))
 		time.sleep(3)
 		url = DETAIL_URL + movie.doubanId
-		r = requests.get(url, timeout=10, headers=HEADERS).text
+		try:
+			r = requests.get(url, headers=HEADERS).text
+		except Exception as e:
+			logging.error('超时或被禁:  %s' %  movie.doubanId)
+			continue
 		poster = BeautifulSoup(r, 'lxml').select('div#mainpic img')[0]['src']
 		movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
 		lists = BeautifulSoup(r, 'lxml').select('ul.celebrities-list .celebrity')
@@ -115,10 +119,11 @@ def get_api_data():
 		movie.title = data.get('alt_title')
 		movie.enTitle = data.get('title')
 		movie.summary = data.get('summary')
+		movie.rate = data['rating'].get('average')
 		if data.get('attrs'):
 			attrs = data.get('attrs')
 			movie.duration = attrs.get('movie_duration')
-			movie.movieType = attrs.get('movie_type')
+			movie.movieTypes = attrs.get('movie_type')
 			movie.pubdate = attrs.get('pubdate')
 	logging.info('----------已获取基本数据, 开始爬取预告片---------')
 	get_page_data()

@@ -25,7 +25,7 @@ class Movie(object):
 		将电影类别插入数据库
 		"""
 		collection = db["categories"]
-		for type in self.movieType:
+		for type in self.movieTypes:
 			ret = collection.find_one({'name': type })
 			if not ret:
 				collection.insert_one({
