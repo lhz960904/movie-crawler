@@ -4,11 +4,12 @@ import time
 
 DB = pymongo.MongoClient("mongodb://localhost:27017/")['movie-trailer']
 class Movie(object):
-	def __init__(self, doubanId):
+	def __init__(self, doubanId, isPlay = 0):
 		"""
 		构造函数，传入doubanID
 		"""
 		self.doubanId = doubanId
+		self.isPlay = isPlay
 
 
 	def print_all_attr(self):

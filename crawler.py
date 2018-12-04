@@ -116,17 +116,18 @@ def get_api_data(movie):
 		else:
 			break
 	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, data.get('alt_title')))
-	movie.author = data.get('author')
+	author = data.get('author')
+	movie.author = author[0]['name'] if author else '无'
 	movie.title = data.get('alt_title')
 	movie.enTitle = data.get('title')
 	movie.summary = data.get('summary')
 	movie.rate = data['rating'].get('average')
 	if data.get('attrs'):
 		attrs = data.get('attrs')
-		movie.duration = attrs.get('movie_duration')
+		duration = attrs.get('movie_duration')
+		movie.duration = duration[0] if duration else '无'
 		movie.movieTypes = attrs.get('movie_type')
-		movie.pubdate = attrs.get('pubdate')
-	
+		movie.pubdate = attrs.get('pubdate')[-1]
 
 
 def crawl_attr():
@@ -156,7 +157,7 @@ def main():
 	# 获取正在热映的电影列表
 	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
-	movies.extend([Movie(it['id']) for it in lists])
+	movies.extend([Movie(it['id'], 1) for it in lists])
 	# 获取即将上映的电影列表
 	r = requests.get(COMING_URL, headers=HEADERS, timeout=10).text
 	movie_row = BeautifulSoup(r, 'lxml').select('table.coming_list tbody tr')
