@@ -93,8 +93,7 @@ def get_trailer_data(movie):
 			movie.cover = re.findall(r'http[s]?://[\w./]+', trailer.find('a')['style'])[0]
 			r2 = requests.get(trailer.find('a')['href'], headers=HEADERS, timeout=10).text
 			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
-		break
-		
+		break	
 
 
 def get_api_data(movie):
@@ -173,11 +172,12 @@ def main():
 
 if __name__ == '__main__':
 	# log日志配置
+	path = os.path.join(os.path.dirname(__file__), 'crawler_log')
 	logging.basicConfig(
         level = logging.INFO,
         format = '%(asctime)s (%(levelname)s) : %(message)s',
         datefmt = '%Y-%m-%d %H:%M:%S',
-        filename = os.path.split(__file__)[0] + '/crawler_log',
+        filename = path,
         filemode = 'a'
     )
 	logging.getLogger("requests").setLevel(logging.WARNING)
