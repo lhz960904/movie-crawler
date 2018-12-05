@@ -1,4 +1,5 @@
 import re
+import os
 import json
 import logging
 import requests
@@ -173,11 +174,13 @@ def main():
 if __name__ == '__main__':
 	# log日志配置
 	logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s (%(levelname)s) : %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        filename='crawler_log',
-        filemode='a')
+        level = logging.INFO,
+        format = '%(asctime)s (%(levelname)s) : %(message)s',
+        datefmt = '%Y-%m-%d %H:%M:%S',
+        filename = os.path.split(__file__)[0] + '/crawler_log',
+        filemode = 'a'
+    )
+	logging.getLogger("requests").setLevel(logging.WARNING)
 	# 删除movie、category表，重新爬取
 	db = pymongo.MongoClient("mongodb://localhost:27017/")['movie-trailer']
 	db["movies"].drop()
