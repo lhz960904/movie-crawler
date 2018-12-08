@@ -51,9 +51,12 @@ def get_trailer_data(movie):
 		except Exception as e:
 			# Todo: 存入文件中、待重新爬取
 			logging.info('超时或被禁: %s' %  movie.doubanId)
+			proxyIps.del_ip()
 			continue
-		poster = BeautifulSoup(r, 'lxml').select('div#mainpic img')[0]['src']
-		movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
+		poster_dom = BeautifulSoup(r, 'lxml').select('div#mainpic img')
+		if (len(poster_dom) > 0):
+			poster = poster_dom[0]['src']
+			movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
 		lists = BeautifulSoup(r, 'lxml').select('ul.celebrities-list .celebrity')
 		casts = []
 		for i in range(1, len(lists)):
@@ -89,9 +92,11 @@ def get_api_data(movie):
 			data = json.loads(r)
 		except Exception as e:
 			logging.info('请求api失败, 重试第%s次' % i)
+			proxyIps.del_ip()
 			continue
 		if data.get('code') == 112:
 			logging.info('IP次数达到上限, 切换IP')
+			proxyIps.del_ip()
 		else:
 			break
 	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, data.get('alt_title')))
@@ -136,7 +141,7 @@ def main():
 	proxyIps = IProxy()
 	logging.info('***************已获取代理ip池, 开始爬取豆瓣***************')
 	# 获取正在热映的电影列表
-	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10, proxies=proxyIps.get_ip()).text
+	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
 	movies.extend([Movie(it['id'], 1) for it in lists])
 	# 获取即将上映的电影列表

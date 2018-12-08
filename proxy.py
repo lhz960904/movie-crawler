@@ -23,7 +23,6 @@ class IProxy(object):
 		通过爬取西刺代理获取100条IP
 		"""
 		url = 'http://www.xicidaili.com/wt/' + str(self.page)
-		print(url)
 		r = requests.get(url, headers=HEADERS, timeout=10).text
 		trs = BeautifulSoup(r, 'lxml').select('#ip_list tr')
 		for i in range(1, 101):
@@ -37,7 +36,9 @@ class IProxy(object):
 	
 	def get_ip(self):
 		if len(self.proxy_ips) == 0:
-			print('ip池用没了')
 			self.page += 1
 			self.get_proxies()
-		return self.proxy_ips.pop(0)
+		return self.proxy_ips[0]
+
+	def del_ip(self):
+		self.proxy_ips.pop(0)
