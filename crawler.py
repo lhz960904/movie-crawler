@@ -7,6 +7,7 @@ import pymongo
 from bs4 import BeautifulSoup
 
 from movie import Movie
+from proxy import IProxy
 
 # 正在热映url
 NOWPLAYING_URL= 'https://movie.douban.com/cinema/nowplaying/'
@@ -31,30 +32,11 @@ HEADERS = {
 # 电影实例list
 movies = []
 
-# 代理IP池
-proxy_ips = []
-
 # 存入数据库总数
 count = 0
 
-
-
-def get_proxies():
-	"""
-	通过爬取西刺代理获取100条IP
-	"""
-	url = 'http://www.xicidaili.com/wt'
-	r = requests.get(url, headers=HEADERS, timeout=10).text
-	trs = BeautifulSoup(r, 'lxml').select('#ip_list tr')
-	for i in range(1, 101):
-		ip = trs[i].select('td:nth-of-type(2)')[0].text
-		port = trs[i].select('td:nth-of-type(3)')[0].text
-		res = 'http://%s:%s' % (ip, port)
-		proxy_ips.append({
-			'http': res
-		})
-	logging.info('***************已获取代理ip池, 开始爬取豆瓣***************')
-
+# 代理ip类实例
+proxyIps = ''
 
 
 def get_trailer_data(movie):
@@ -62,14 +44,13 @@ def get_trailer_data(movie):
 	爬取电影详情页获取预告片
 	"""
 	url = DETAIL_URL + movie.doubanId
-	for i in range(len(proxy_ips)):
-		proxies = proxy_ips[0]
+	for i in range(100):
+		proxies = proxyIps.get_ip()
 		try:
 			r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
 		except Exception as e:
 			# Todo: 存入文件中、待重新爬取
 			logging.info('超时或被禁: %s' %  movie.doubanId)
-			proxy_ips.pop(0)
 			continue
 		poster = BeautifulSoup(r, 'lxml').select('div#mainpic img')[0]['src']
 		movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
@@ -101,18 +82,16 @@ def get_api_data(movie):
 	利用豆瓣api获取数据
 	"""
 	url = API_URL + movie.doubanId
-	for i in range(len(proxy_ips)):
-		proxies = proxy_ips[0]
+	for i in range(100):
+		proxies = proxyIps.get_ip()
 		try:
 			r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
 			data = json.loads(r)
 		except Exception as e:
 			logging.info('请求api失败, 重试第%s次' % i)
-			proxy_ips.pop(0)
 			continue
 		if data.get('code') == 112:
 			logging.info('IP次数达到上限, 切换IP')
-			proxy_ips.pop(0)
 		else:
 			break
 	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, data.get('alt_title')))
@@ -153,9 +132,11 @@ def main():
 	"""
 	爬虫入口，获取要爬取的电影doubanID
 	"""
-	get_proxies()
+	global proxyIps
+	proxyIps = IProxy()
+	logging.info('***************已获取代理ip池, 开始爬取豆瓣***************')
 	# 获取正在热映的电影列表
-	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
+	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10, proxies=proxyIps.get_ip()).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
 	movies.extend([Movie(it['id'], 1) for it in lists])
 	# 获取即将上映的电影列表

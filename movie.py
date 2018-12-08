@@ -26,6 +26,10 @@ class Movie(object):
 		"""
 		collection = DB["movies"]
 		movie_dict = dict(vars(self).items())
+		# 检查数据库是否存在
+		ret = collection.find_one({'doubanId': movie_dict['doubanId'] })
+		if ret:
+			return ret['_id']
 		result = collection.insert_one(movie_dict)
 		self.insertMovieType(result.inserted_id)
 		return result.inserted_id
@@ -47,8 +51,5 @@ class Movie(object):
 				ret['movies'].append(object_id)
 				collection.update({'name': type }, ret)
 
-
-	# def function():
-	# 	pass
 
 
