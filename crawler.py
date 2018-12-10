@@ -105,7 +105,8 @@ def get_api_data(movie):
 	movie.title = data.get('alt_title')
 	movie.enTitle = data.get('title')
 	movie.summary = data.get('summary')
-	movie.rate = data['rating'].get('average')
+	rate = data['rating'].get('average')
+	movie.rate = float(rate) if rate else 0
 	if data.get('attrs'):
 		attrs = data.get('attrs')
 		duration = attrs.get('movie_duration')
