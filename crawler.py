@@ -56,7 +56,7 @@ def get_trailer_data(movie):
 		poster_dom = BeautifulSoup(r, 'lxml').select('div#mainpic img')
 		if (len(poster_dom) > 0):
 			poster = poster_dom[0]['src']
-			movie.poster = poster.replace('s_ratio_poster', 'l_ratio_poster')
+			movie.poster = poster
 		lists = BeautifulSoup(r, 'lxml').select('ul.celebrities-list .celebrity')
 		casts = []
 		for i in range(1, len(lists)):
@@ -99,11 +99,9 @@ def get_api_data(movie):
 			proxyIps.del_ip()
 		else:
 			break
-	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, data.get('alt_title')))
+	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, movie.title))
 	author = data.get('author')
 	movie.author = author[0]['name'] if author else '无'
-	movie.title = data.get('alt_title')
-	movie.enTitle = data.get('title')
 	movie.summary = data.get('summary')
 	rate = data['rating'].get('average')
 	movie.rate = float(rate) if rate else 0
@@ -144,13 +142,14 @@ def main():
 	# 获取正在热映的电影列表
 	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
-	movies.extend([Movie(it['id'], 1) for it in lists])
+	movies.extend([Movie(it['id'],it['data-title'], 1) for it in lists])
 	# 获取即将上映的电影列表
 	r = requests.get(COMING_URL, headers=HEADERS, timeout=10).text
 	movie_row = BeautifulSoup(r, 'lxml').select('table.coming_list tbody tr')
 	for it in movie_row:
 		href = it.select('td:nth-of-type(2) > a')[0]['href']
-		movie = Movie(re.findall(r'\d+\.?', href)[0])
+		title = it.select('td:nth-of-type(2) > a')[0].text
+		movie = Movie(re.findall(r'\d+\.?', href)[0], title, 0)
 		movies.append(movie)
 	logging.info('***************已获取待爬取电影数组:  %s个***************' % len(movies))
 	crawl_attr()
