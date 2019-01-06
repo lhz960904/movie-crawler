@@ -2,6 +2,8 @@
 
 > 利用python去抓取豆瓣页面doubanID数组，并通过请求电影API、模拟访问详情页获取所需要的信息，存入MongoDB数据库。用于[movie-api](https://github.com/lhz960904/movie-api)使用。项目部署到服务器并通过crontab每日定时执行。
 
+### log截图
+
 ![log截图](./log.png)
 
 ### 爬取URL
@@ -9,7 +11,7 @@
 - **正在热映**：https://movie.douban.com/cinema/nowplaying/
 - **即将上映**：https://movie.douban.com/coming
 
-- **电影API**：http://api.douban.com/v2/movie/ ${doubanId}
+- **电影API**：http://api.douban.com/v2/movie/${doubanId}
 - **详情页**：https://movie.douban.com/subject/${doubanId}
 
 ### 定时任务命令
