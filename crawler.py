@@ -110,7 +110,7 @@ def get_api_data(movie):
 		duration = attrs.get('movie_duration')
 		movie.duration = duration[0] if duration else '无'
 		movie.movieTypes = attrs.get('movie_type')
-		movie.pubdate = attrs.get('pubdate')[-1]
+		movie.pubdate = attrs.get('pubdate')[-1] if attrs.get('pubdate') else '无'
 
 
 def crawl_attr():
