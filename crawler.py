@@ -73,7 +73,7 @@ def crawlAttr(movie):
 	爬取电影详情页获取预告片
 	"""
 	# logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, movie.title))
-	logging.info('ID: %s, Title: %s' % (movie.doubanId, movie.title))
+	logging.info('ID: %s' % (movie.doubanId))
 	url = DETAIL_URL + movie.doubanId
 	for i in range(50):
 		proxies = proxyIps.get_ip()
@@ -93,7 +93,7 @@ def crawlAttr(movie):
 		movie.rate = parseRate(BeautifulSoup(r, 'lxml').select_one('div#interest_sectl'))
 		summaryDom = BeautifulSoup(r, 'lxml').select_one('div#link-report')
 		movie.summary = parseSummary(summaryDom) if summaryDom else ''
-		movie.print_all_attr()
+		# movie.print_all_attr()
 		poster_dom = BeautifulSoup(r, 'lxml').select('div#mainpic img')
 		if (len(poster_dom) > 0):
 			poster = poster_dom[0]['src']
