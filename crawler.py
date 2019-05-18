@@ -117,7 +117,6 @@ def crawlAttr(movie):
 			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
 		break	
 
-
 def beginCrawl():
 	"""
 	遍历待爬取电影数组，获取所有属性，存入数据库
