@@ -15,9 +15,6 @@ NOWPLAYING_URL= 'https://movie.douban.com/cinema/nowplaying/'
 # 即将上映url
 COMING_URL = 'https://movie.douban.com/coming'
 
-# 豆瓣api_url
-API_URL = 'http://api.douban.com/v2/movie/'
-
 # 豆瓣电影详情url
 DETAIL_URL = 'https://movie.douban.com/subject/'
 
@@ -39,20 +36,61 @@ count = 0
 proxyIps = ''
 
 
-def get_trailer_data(movie):
+# 解析导演
+def parseAuthor(dom):
+	res = dom.find('a', rel='v:directedBy')
+	return res.text if res else ''
+
+# 解析时长
+def parseDuration(dom):
+	res = dom.find('span', property='v:runtime')
+	return res.text if res else ''
+
+# 解析类型
+def parseTypes(dom):
+	res = dom.find_all('span', property='v:genre')
+	return [it.text for it in res]
+	
+# 解析类型
+def parsePubdate(dom):
+	res = dom.find('span', property='v:initialReleaseDate')
+	return res.text if res else ''
+
+# 解析类型
+def parseRate(dom):
+	res = dom.find('strong', property='v:average')
+	return res.text if res else 0
+
+# 解析类型
+def parseSummary(dom):
+	res = dom.find('span', property='v:summary')
+	return res.text.strip() if res else ''
+
+
+def crawlAttr(movie):
 	"""
 	爬取电影详情页获取预告片
 	"""
+	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, movie.title))
 	url = DETAIL_URL + movie.doubanId
-	for i in range(100):
+	for i in range(50):
 		proxies = proxyIps.get_ip()
 		try:
 			r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
-		except Exception as e:
-			# Todo: 存入文件中、待重新爬取
+		except Exception:
 			logging.info('超时或被禁: %s' %  movie.doubanId)
 			proxyIps.del_ip()
 			continue
+		# author、summary、rate、duration、movieTypes、pubdate
+		info = BeautifulSoup(r, 'lxml').select_one('div#info')
+		movie.author = parseAuthor(info)
+		movie.duration = parseDuration(info)
+		movie.movieTypes = parseTypes(info)
+		movie.pubdate = parsePubdate(info)
+		movie.rate = parseRate(BeautifulSoup(r, 'lxml').select_one('div#interest_sectl'))
+		summaryDom = BeautifulSoup(r, 'lxml').select_one('div#link-report')
+		movie.summary = parseSummary(summaryDom) if summaryDom else ''
+		movie.print_all_attr()
 		poster_dom = BeautifulSoup(r, 'lxml').select('div#mainpic img')
 		if (len(poster_dom) > 0):
 			poster = poster_dom[0]['src']
@@ -62,7 +100,7 @@ def get_trailer_data(movie):
 		for i in range(1, len(lists)):
 			try:
 				backgroud = lists[i].find('div', class_='avatar')['style']
-			except Exception as e:
+			except Exception:
 				logging.info('无效图片块儿')
 				continue
 			avatar = re.findall(r'http[s]?://[\w./]+', backgroud)[0]
@@ -80,40 +118,7 @@ def get_trailer_data(movie):
 		break	
 
 
-def get_api_data(movie):
-	"""
-	利用豆瓣api获取数据
-	"""
-	url = API_URL + movie.doubanId
-	for i in range(100):
-		proxies = proxyIps.get_ip()
-		try:
-			r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
-			data = json.loads(r)
-		except Exception as e:
-			logging.info('请求api失败, 重试第%s次' % i)
-			proxyIps.del_ip()
-			continue
-		if data.get('code') == 112:
-			logging.info('IP次数达到上限, 切换IP')
-			proxyIps.del_ip()
-		else:
-			break
-	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, movie.title))
-	author = data.get('author')
-	movie.author = author[0]['name'] if author else '无'
-	movie.summary = data.get('summary')
-	rate = data['rating'].get('average')
-	movie.rate = float(rate) if rate else 0
-	if data.get('attrs'):
-		attrs = data.get('attrs')
-		duration = attrs.get('movie_duration')
-		movie.duration = duration[0] if duration else '无'
-		movie.movieTypes = attrs.get('movie_type')
-		movie.pubdate = attrs.get('pubdate')[-1]
-
-
-def crawl_attr():
+def beginCrawl():
 	"""
 	遍历待爬取电影数组，获取所有属性，存入数据库
 	"""
@@ -121,8 +126,8 @@ def crawl_attr():
 	for idx, movie in enumerate(movies):
 		logging.info('----------------------------------------------------------')
 		logging.info('爬取序号: %s' % (idx))
-		get_api_data(movie)
-		get_trailer_data(movie)
+		crawlAttr(movie)
+		# 存在视频封面和视频则存入数据库
 		if hasattr(movie, 'cover') and hasattr(movie, 'video'):
 			object_id = movie.insertMongo()
 			logging.info('ObjectId: %s, 存入数据库' % object_id)
@@ -152,7 +157,7 @@ def main():
 		movie = Movie(re.findall(r'\d+\.?', href)[0], title, 0)
 		movies.append(movie)
 	logging.info('***************已获取待爬取电影数组:  %s个***************' % len(movies))
-	crawl_attr()
+	beginCrawl()
 
 
 
@@ -160,12 +165,12 @@ if __name__ == '__main__':
 	# log日志配置
 	path = os.path.join(os.path.dirname(__file__), 'crawler_log')
 	logging.basicConfig(
-        level = logging.INFO,
-        format = '%(asctime)s (%(levelname)s) : %(message)s',
-        datefmt = '%Y-%m-%d %H:%M:%S',
-        filename = path,
-        filemode = 'a'
-    )
+		level = logging.INFO,
+		format = '%(asctime)s (%(levelname)s) : %(message)s',
+		datefmt = '%Y-%m-%d %H:%M:%S',
+		filename = path,
+		filemode = 'a'
+	)
 	logging.getLogger("requests").setLevel(logging.WARNING)
 	# 删除movie、category表，重新爬取
 	db = pymongo.MongoClient("mongodb://localhost:27017/")['movie-trailer']

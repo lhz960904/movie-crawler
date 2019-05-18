@@ -11,6 +11,7 @@ class Movie(object):
 		self.doubanId = doubanId
 		self.title = title
 		self.isPlay = isPlay
+		self.movieTypes = []
 
 
 	def print_all_attr(self):
