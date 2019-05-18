@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
-
 import re
 import os
 import json
@@ -74,14 +71,14 @@ def crawlAttr(movie):
 	"""
 	爬取电影详情页获取预告片
 	"""
-	logging.info('爬取ID: %s, Title: %s' % (movie.doubanId, movie.title))
+	logging.info(u'爬取ID: %s, Title: %s' % (movie.doubanId, movie.title))
 	url = DETAIL_URL + movie.doubanId
 	for i in range(50):
 		proxies = proxyIps.get_ip()
 		try:
 			r = requests.get(url, headers=HEADERS, timeout=10, proxies=proxies).text
 		except Exception:
-			logging.info('超时或被禁: %s' %  movie.doubanId)
+			logging.info(u'超时或被禁: %s' %  movie.doubanId)
 			proxyIps.del_ip()
 			continue
 		# author、summary、rate、duration、movieTypes、pubdate
@@ -104,7 +101,7 @@ def crawlAttr(movie):
 			try:
 				backgroud = lists[i].find('div', class_='avatar')['style']
 			except Exception:
-				logging.info('无效图片块儿')
+				logging.info(u'无效图片块儿')
 				continue
 			avatar = re.findall(r'http[s]?://[\w./]+', backgroud)[0]
 			name = lists[i].find('a', class_='name').text
@@ -127,7 +124,7 @@ def beginCrawl():
 	global count
 	for idx, movie in enumerate(movies):
 		logging.info('----------------------------------------------------------')
-		logging.info('爬取序号: %s' % (idx))
+		logging.info(u'爬取序号: %s' % (idx))
 		crawlAttr(movie)
 		# 存在视频封面和视频则存入数据库
 		if hasattr(movie, 'cover') and hasattr(movie, 'video'):
@@ -136,7 +133,7 @@ def beginCrawl():
 			count += 1
 		# movie.print_all_attr()
 	logging.info('----------------------------------------------------------')
-	logging.info('存入数据库总数为: %s' % count)
+	logging.info(u'存入数据库总数为: %s' % count)
 
 
 def main():
@@ -145,7 +142,7 @@ def main():
 	"""
 	global proxyIps
 	proxyIps = IProxy()
-	logging.info('***************已获取代理ip池, 开始爬取豆瓣***************')
+	logging.info(u'***************已获取代理ip池, 开始爬取豆瓣***************')
 	# 获取正在热映的电影列表
 	r = requests.get(NOWPLAYING_URL, headers=HEADERS, timeout=10).text
 	lists = BeautifulSoup(r, 'lxml').select('div#nowplaying li.list-item')
@@ -158,7 +155,7 @@ def main():
 		title = it.select('td:nth-of-type(2) > a')[0].text
 		movie = Movie(re.findall(r'\d+\.?', href)[0], title, 0)
 		movies.append(movie)
-	logging.info('***************已获取待爬取电影数组:  %s个***************' % len(movies))
+	logging.info(u'***************已获取待爬取电影数组:  %s个***************' % len(movies))
 	beginCrawl()
 
 
@@ -171,7 +168,7 @@ if __name__ == '__main__':
 		format = '%(asctime)s (%(levelname)s) : %(message)s',
 		datefmt = '%Y-%m-%d %H:%M:%S',
 		filename = path,
-		filemode = 'a'
+		filemode = 'a',
 	)
 	logging.getLogger("requests").setLevel(logging.WARNING)
 	# 删除movie、category表，重新爬取
