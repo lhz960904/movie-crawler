@@ -115,7 +115,8 @@ def crawlAttr(movie):
 		if trailer:
 			movie.cover = re.findall(r'http[s]?://[\w./]+', trailer.find('a')['style'])[0]
 			r2 = requests.get(trailer.find('a')['href'], headers=HEADERS, timeout=10).text
-			movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
+			if r2:
+				movie.video = BeautifulSoup(r2, 'lxml').find('source')['src']
 		break	
 
 def beginCrawl():
